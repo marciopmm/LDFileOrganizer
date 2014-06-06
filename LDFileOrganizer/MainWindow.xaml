@@ -1,8 +1,18 @@
 ﻿<Window x:Class="LDFileOrganizer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MainWindow" Height="350" Width="525">
+        Title="MainWindow" Height="350" Width="542.105" Background="#FF191919" Foreground="#FFCCCCCC">
     <Grid>
-        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock Grid.Row="0" Grid.Column="0" TextWrapping="Wrap" Text="Folder" HorizontalAlignment="Right" Width="69" Height="25" Margin="0,10,5,0" VerticalAlignment="Center" TextAlignment="Right"/>
+        <TextBox Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="0,0,0,0" Grid.Row="0" TextWrapping="NoWrap" Text="" Width="400"/>
+        <Button Grid.Row="0" Grid.Column="1" Width="30" Height="30" Margin="420,10,10,5" Content="..." VerticalAlignment="Bottom"/>
     </Grid>
 </Window>
