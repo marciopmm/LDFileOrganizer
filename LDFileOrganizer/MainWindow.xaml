@@ -17,7 +17,7 @@
         </Grid.ColumnDefinitions>
         <TextBlock Grid.Row="0" Grid.Column="0" TextWrapping="Wrap" Text="Folder" HorizontalAlignment="Right" Width="69" Height="25" Margin="0,10,5,0" VerticalAlignment="Center" TextAlignment="Right"/>
         <WrapPanel Grid.Column="1" Grid.Row="0">
-            <TextBox x:Name="txtPath" HorizontalAlignment="Left" Height="23" Margin="0,13" TextWrapping="NoWrap" Text="" Width="413"/>
+            <TextBox x:Name="txtPath" IsReadOnly="True" HorizontalAlignment="Left" Height="23" Margin="0,13" TextWrapping="NoWrap" Text="" Width="413"/>
             <Button Height="22" Width="25" Margin="5,0,0,0" Content="..." VerticalAlignment="Center" Click="Button_Click"/>
         </WrapPanel>
         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2">
@@ -28,8 +28,9 @@
         <StackPanel Grid.Column="1" Grid.Row="3">
             <GroupBox Header="Actions" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" Height="100" Width="450">
                 <StackPanel>
-                    <CheckBox x:Name="chkDuplicated" Content="Remove duplicated files" HorizontalAlignment="Left" Margin="29,24,0,0" VerticalAlignment="Top" Foreground="#FFCCCCCC"/>
+                    <CheckBox x:Name="chkDuplicated" Content="Remove duplicated files" HorizontalAlignment="Left" Margin="29,10,0,0" VerticalAlignment="Top" Foreground="#FFCCCCCC"/>
                     <CheckBox x:Name="chkSubfolders" Content="Remove subfolders (all files will be placed in the folder above)" HorizontalAlignment="Left" Margin="29,7,0,0" VerticalAlignment="Top" Foreground="#FFCCCCCC"/>
+                    <CheckBox x:Name="chkNumerals" Content="Remove numerals of start and end from file names" HorizontalAlignment="Left" Margin="29,7,0,0" VerticalAlignment="Top" Foreground="#FFCCCCCC"/>
                 </StackPanel>
             </GroupBox>
             <Button x:Name="btnGo" Content="Go for it!" Width="100" Height="30" HorizontalAlignment="Right" Margin="0,10,35,20" Click="btnGo_Click"/>

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +23,8 @@ namespace LDFileOrganizer
     /// </summary>
     public partial class MainWindow : Window
     {
+        private AnalysisResult result;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -32,7 +35,11 @@ namespace LDFileOrganizer
             var folder = new System.Windows.Forms.FolderBrowserDialog();
             if (folder.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
-                txtPath.Text = folder.SelectedPath;
+                if (txtPath.Text != folder.SelectedPath)
+                {
+                    txtPath.Text = folder.SelectedPath;
+                    result = null;
+                }
             }
         }
 
@@ -41,16 +48,40 @@ namespace LDFileOrganizer
             if (!CheckPath())
                 return;
 
-            this.Cursor = Cursors.Wait;
+            Thread t = new Thread(new ThreadStart(AnalyzeThread));
+            t.Start();
+        }
+
+        private void btnGo_Click(object sender, RoutedEventArgs e)
+        {
+            if (!CheckPath())
+                return;
+
+            Thread t = new Thread(new ThreadStart(GoThread));
+            t.Start();
+        }
+
+        private void AnalyzeThread()
+        {
+            string path = null;
+            txtPath.Dispatcher.Invoke(new Action(() => { path = txtPath.Text; }));
+            
             StringBuilder sb = new StringBuilder();
 
-            DirectoryInfo dir = new DirectoryInfo(txtPath.Text);
+            DirectoryInfo dir = new DirectoryInfo(path);
             if (dir.Exists)
             {
-                lblStatus.Content = "Analyzing folder...";
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    this.Cursor = Cursors.Wait;
+                    lblStatus.Content = "Analyzing folders...";
+                    btnAnalyze.IsEnabled = false;
+                    btnGo.IsEnabled = false;
+                }));
+
                 IAnalyzer analyzer = new DefaultAnalyzer(dir);
-                AnalysisResult result = analyzer.Analyze();
-                lblStatus.Content = "Ready";
+                analyzer.FileAnalyzed += analyzer_FileAnalyzed;
+                result = analyzer.Analyze();
                 sb.AppendLine("Analysis of folder \"" + dir.FullName + "\" has returned the following results:");
                 sb.AppendLine();
                 sb.AppendLine("Subfolders found: " + result.FoldersAffected.ToString());
@@ -60,35 +91,60 @@ namespace LDFileOrganizer
             else
                 MessageBox.Show("The chosen folder does not exists.", "Pay attention...", MessageBoxButton.OK, MessageBoxImage.Exclamation);
 
-            txbResult.Text = sb.ToString();
-            this.Cursor = null;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                txbResult.Text = sb.ToString();
+                this.Cursor = null;
+                lblStatus.Content = "Ready";
+                progBar.Value = 0.0d;
+                btnAnalyze.IsEnabled = true;
+                btnGo.IsEnabled = true;
+            }));
         }
 
-        private void btnGo_Click(object sender, RoutedEventArgs e)
+        private void analyzer_FileAnalyzed(object sender, Tuple<string, double> e)
         {
-            if (!CheckPath())
-                return;
+            Dispatcher.Invoke(new Action(() =>
+            {
+                txbResult.Text = "Analyzing file: " + e.Item1;
+                progBar.Value = e.Item2;
+            }));
+        }
 
-            this.Cursor = Cursors.Wait;
+        private void GoThread()
+        {
+            string path = null;
+            bool? duplicated = null, subFolders = null, numerals = null;
+            txtPath.Dispatcher.Invoke(new Action(() => { path = txtPath.Text; }));
+            txtPath.Dispatcher.Invoke(new Action(() => { 
+                duplicated = chkDuplicated.IsChecked;
+                subFolders = chkSubfolders.IsChecked;
+                numerals = chkNumerals.IsChecked;
+            }));
+
             StringBuilder sb = new StringBuilder();
 
             try
             {
-                DirectoryInfo dir = new DirectoryInfo(txtPath.Text);
+                DirectoryInfo dir = new DirectoryInfo(path);
                 if (dir.Exists)
                 {
-                    lblStatus.Content = "Analyzing folder...";
                     IAnalyzer analyzer = new DefaultAnalyzer(dir);
-                    AnalysisResult result1 = analyzer.Analyze();
-                    lblStatus.Content = "Ready";
-                    sb.AppendLine("Analysis of folder \"" + dir.FullName + "\" has returned the following results:");
-                    sb.AppendLine("*** Before execution ***");
-                    sb.AppendLine("Subfolders found: " + result1.FoldersAffected.ToString());
-                    sb.AppendLine("Files found in folder and subfolders: " + result1.FilesAffected.ToString());
-                    sb.AppendLine("Duplicated files in folder and subfolders: " + result1.DuplicatedFiles.Length.ToString());
+                    analyzer.FolderAnalyzed += analyzer_FolderAnalyzed;
+                    analyzer.FileRenamed += analyzer_FileRenamed;
+                    analyzer.DuplicatedFileRemoved += analyzer_DuplicatedFileRemoved;
+                    analyzer.DeletingDuplicatedFilesStarted += analyzer_DeletingDuplicatedFilesStarted;
+                    analyzer.DeletingFolderStarted += analyzer_DeletingFolderStarted;
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        this.Cursor = Cursors.Wait;
+                        lblStatus.Content = "Organizing and cleaning folders...";
+                        btnAnalyze.IsEnabled = false;
+                        btnGo.IsEnabled = false;
+                    }));
 
-                    AnalysisResult result2 = analyzer.Execute(chkDuplicated.IsChecked, chkSubfolders.IsChecked);
-                    sb.AppendLine("*** After execution ***");
+                    AnalysisResult result2 = analyzer.Execute(duplicated, subFolders, numerals);
+                    sb.AppendLine("Analysis of folder \"" + dir.FullName + "\" has returned the following results after the execution:");
                     sb.AppendLine("Subfolders found: " + result2.FoldersAffected.ToString());
                     sb.AppendLine("Files found in folder and subfolders: " + result2.FilesAffected.ToString());
                     sb.AppendLine("Duplicated files in folder and subfolders: " + result2.DuplicatedFiles.Length.ToString());
@@ -96,13 +152,69 @@ namespace LDFileOrganizer
                 else
                     MessageBox.Show("The chosen folder does not exists.", "Pay attention...", MessageBoxButton.OK, MessageBoxImage.Exclamation);
             }
+            catch (ApplicationException ex)
+            {
+                MessageBox.Show(ex.Message, "Pay attention...", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+            }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
-            txbResult.Text = sb.ToString();
-            this.Cursor = null;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                txbResult.Text = sb.ToString();
+                this.Cursor = null;
+                lblStatus.Content = "Ready";
+                progBar.Value = 0.0d;
+                btnAnalyze.IsEnabled = true;
+                btnGo.IsEnabled = true;
+            }));
+        }
+
+        private void analyzer_DeletingFolderStarted(object sender, EventArgs e)
+        {
+            Dispatcher.Invoke(new Action(() =>
+            {
+                progBar.Value = 0.0d;
+                lblStatus.Content = "Deleting folders...";
+            }));
+        }
+
+        private void analyzer_DuplicatedFileRemoved(object sender, Tuple<string, double> e)
+        {
+            Dispatcher.Invoke(new Action(() =>
+            {
+                txbResult.Text = "Deleting file: " + e.Item1;
+                progBar.Value = e.Item2;
+            }));
+        }
+
+        private void analyzer_DeletingDuplicatedFilesStarted(object sender, EventArgs e)
+        {
+            Dispatcher.Invoke(new Action(() =>
+            {
+                progBar.Value = 0.0d;
+                lblStatus.Content = "Removing duplicated files...";
+            }));
+        }
+
+        private void analyzer_FileRenamed(object sender, Tuple<string, double> e)
+        {
+            Dispatcher.Invoke(new Action(() =>
+            {
+                txbResult.Text = "Renaming file: " + e.Item1;
+                progBar.Value = e.Item2;
+            }));
+        }
+
+        private void analyzer_FolderAnalyzed(object sender, Tuple<string, double> e)
+        {
+            Dispatcher.Invoke(new Action(() =>
+            {
+                txbResult.Text = "Analyzing folder: " + e.Item1;
+                progBar.Value = e.Item2;
+            }));
         }
 
         private bool CheckPath()
