@@ -15,7 +15,13 @@ namespace LDFileOrganizer.Analyzers
         private double folderCount;
         private DirectoryInfo _dir;
         private DirectoryInfo[] _folders;
-        private AnalysisResult result;
+        private AnalysisResult _result;
+
+        public AnalysisResult Result
+        {
+            get { return _result; }
+            set { _result = value; }
+        }
 
         public event EventHandler<Tuple<string, double>> FileAnalyzed;
         public event EventHandler<Tuple<string, double>> DuplicatedFileRemoved;
@@ -32,13 +38,13 @@ namespace LDFileOrganizer.Analyzers
 
         public AnalysisResult Analyze()
         {
-            result = new AnalysisResult();
-            result.FilesAffected = GetAllFiles().Length;
-            result.FoldersAffected = GetAllFolders().Length;
+            _result = new AnalysisResult();
+            _result.FilesAffected = GetAllFiles().Length;
+            _result.FoldersAffected = GetAllFolders().Length;
 
-            result.DuplicatedFiles = GetDuplicatedFiles();
+            _result.DuplicatedFiles = GetDuplicatedFiles();
 
-            return result;
+            return _result;
         }
 
         public AnalysisResult Execute(bool? removeDuplicated, bool? removeFolders, bool? removeNumerals)
@@ -58,20 +64,20 @@ namespace LDFileOrganizer.Analyzers
 
             if (removeDuplicated.HasValue && removeDuplicated.Value)
             {
-                if (result == null)
+                if (_result == null)
                     throw new ApplicationException("You have to make a first analysis fo your folder in order to remove duplicated files. Please do it by clicking the \"Analyze it!\" button before go.");
 
                 if (DeletingDuplicatedFilesStarted != null)
                     DeletingDuplicatedFilesStarted(this, EventArgs.Empty);
 
-                for (int i = 0; i < result.DuplicatedFiles.Length; i++)
+                for (int i = 0; i < _result.DuplicatedFiles.Length; i++)
                 {
-                    FileInfo file = result.DuplicatedFiles[i];
+                    FileInfo file = _result.DuplicatedFiles[i];
                     file.Attributes = FileAttributes.Normal;
                     file.Delete();
 
                     if (DuplicatedFileRemoved != null)
-                        DuplicatedFileRemoved(this, new Tuple<string, double>(file.FullName, ((double)i / (double)result.DuplicatedFiles.Length) * 100.0d));
+                        DuplicatedFileRemoved(this, new Tuple<string, double>(file.FullName, ((double)i / (double)_result.DuplicatedFiles.Length) * 100.0d));
                 }
             }
 
@@ -98,8 +104,8 @@ namespace LDFileOrganizer.Analyzers
                 }
             }
 
-            result = Analyze();
-            return result;
+            _result = Analyze();
+            return _result;
         }
 
         private void DeleteChildren(DirectoryInfo folder)

@@ -9,6 +9,7 @@ namespace LDFileOrganizer.Analyzers
 {
     public interface IAnalyzer
     {
+        AnalysisResult Result { get; set; }
         event EventHandler<Tuple<string, double>> FileAnalyzed;
         event EventHandler<Tuple<string, double>> DuplicatedFileRemoved;
         event EventHandler<Tuple<string, double>> FileRenamed;

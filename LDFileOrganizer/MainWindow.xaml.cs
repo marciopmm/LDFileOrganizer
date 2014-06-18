@@ -23,7 +23,8 @@ namespace LDFileOrganizer
     /// </summary>
     public partial class MainWindow : Window
     {
-        private AnalysisResult result;
+        private AnalysisResult _result;
+        private IAnalyzer _analyzer;
 
         public MainWindow()
         {
@@ -38,7 +39,7 @@ namespace LDFileOrganizer
                 if (txtPath.Text != folder.SelectedPath)
                 {
                     txtPath.Text = folder.SelectedPath;
-                    result = null;
+                    _result = null;
                 }
             }
         }
@@ -79,14 +80,14 @@ namespace LDFileOrganizer
                     btnGo.IsEnabled = false;
                 }));
 
-                IAnalyzer analyzer = new DefaultAnalyzer(dir);
-                analyzer.FileAnalyzed += analyzer_FileAnalyzed;
-                result = analyzer.Analyze();
+                _analyzer = new DefaultAnalyzer(dir);
+                _analyzer.FileAnalyzed += analyzer_FileAnalyzed;
+                _result = _analyzer.Analyze();
                 sb.AppendLine("Analysis of folder \"" + dir.FullName + "\" has returned the following results:");
                 sb.AppendLine();
-                sb.AppendLine("Subfolders found: " + result.FoldersAffected.ToString());
-                sb.AppendLine("Files found in folder and subfolders: " + result.FilesAffected.ToString());
-                sb.AppendLine("Duplicated files in folder and subfolders: " + result.DuplicatedFiles.Length.ToString());
+                sb.AppendLine("Subfolders found: " + _result.FoldersAffected.ToString());
+                sb.AppendLine("Files found in folder and subfolders: " + _result.FilesAffected.ToString());
+                sb.AppendLine("Duplicated files in folder and subfolders: " + _result.DuplicatedFiles.Length.ToString());
             }
             else
                 MessageBox.Show("The chosen folder does not exists.", "Pay attention...", MessageBoxButton.OK, MessageBoxImage.Exclamation);
@@ -129,12 +130,11 @@ namespace LDFileOrganizer
                 DirectoryInfo dir = new DirectoryInfo(path);
                 if (dir.Exists)
                 {
-                    IAnalyzer analyzer = new DefaultAnalyzer(dir);
-                    analyzer.FolderAnalyzed += analyzer_FolderAnalyzed;
-                    analyzer.FileRenamed += analyzer_FileRenamed;
-                    analyzer.DuplicatedFileRemoved += analyzer_DuplicatedFileRemoved;
-                    analyzer.DeletingDuplicatedFilesStarted += analyzer_DeletingDuplicatedFilesStarted;
-                    analyzer.DeletingFolderStarted += analyzer_DeletingFolderStarted;
+                    _analyzer.FolderAnalyzed += analyzer_FolderAnalyzed;
+                    _analyzer.FileRenamed += analyzer_FileRenamed;
+                    _analyzer.DuplicatedFileRemoved += analyzer_DuplicatedFileRemoved;
+                    _analyzer.DeletingDuplicatedFilesStarted += analyzer_DeletingDuplicatedFilesStarted;
+                    _analyzer.DeletingFolderStarted += analyzer_DeletingFolderStarted;
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
                         this.Cursor = Cursors.Wait;
@@ -143,7 +143,7 @@ namespace LDFileOrganizer
                         btnGo.IsEnabled = false;
                     }));
 
-                    AnalysisResult result2 = analyzer.Execute(duplicated, subFolders, numerals);
+                    AnalysisResult result2 = _analyzer.Execute(duplicated, subFolders, numerals);
                     sb.AppendLine("Analysis of folder \"" + dir.FullName + "\" has returned the following results after the execution:");
                     sb.AppendLine("Subfolders found: " + result2.FoldersAffected.ToString());
                     sb.AppendLine("Files found in folder and subfolders: " + result2.FilesAffected.ToString());
